@@ -1,0 +1,124 @@
+## Principal componant analysis
+PCA aims to describe the variation in a set of correlated variables
+in terms of a new set of uncorrelated variables
+
+The new coordinate values that represent the data are known
+as the Principal Componants
+
+
+# Old faithful Eg, p = 2 variables
+
+```{r}
+plot(faithful)
+p<- prcomp(faithful,scale=TRUE)
+p
+```
+
+This output tells us that
+• The first PC direction is:
+    a1 =[-.707
+         -.707]
+• The first score vector is:
+    y1= -.707 x eruptions -.707 x waiting
+• The sd of y1 is 1.38
+
+• The second PC direction is:
+    a1 =[.707
+         -.707]
+• The second score vector is:
+    y2= .707 x eruptions -.707 x waiting
+• The sd of y2 is 0.31
+
+
+# Plotting the results
+```{r}
+plot(p, main = "PC variances")
+biplot(p,scale=0,xlabs=rep(".",nrow(faithful)),cex=c(3,1))
+```
+
+This plot shows y1 on the x-axis and y2 on the y-axis
+The arrows are proportional to the loadings.
+
+
+It's possible to plot without using the biplot function
+```{r}
+p <- prcomp(faithful, scale=TRUE, retx=TRUE)
+plot(p$x[,1], p$x[,2], xlab="PC1",ylab="PC2", asp=1) #asp=1 uses aspect ratio of 1
+#now to add the arrows and labels
+for (i in 1:nrow(p$rotation)){
+  lines(c(0,2*p$rotation[i,1]),c(0,2*p$rotation[i,2]), col="red")
+}
+text(2*p$rotation[,1],2*p$rotation[,2], rownames(p$rotation), col="red")
+
+```
+
+PCA analysis on Olympics decathlon points, with integrated kmeans analysis
+```{r}
+olympic <- read.table("olympic88.txt",header=T)
+head(olympic)
+pairs(olympic, gap=.3)
+```
+
+The dataset gives the performances of 34 men's decathlon performances for each event. Also included is the total points.
+
+```{r}
+p<- prcomp(olympic[,-11],scale=TRUE)
+p$rotation[,1:2] #Just PC1 and PC2
+summary(p)
+```
+
+This shows 50% of the variation is the PC1, 71% in PC1 and PC2
+
+The first componant has negative weights for the events where the results are measured in time (small values are good) and positive weights for events where the result is measured in meters (large values are good).... So the first component is an overall measure of performance
+
+The second component has positive weights for all variables except long jump and high jump (minuscule). PC2 contrasts performance on throwing events (strength) with that of the running events and long jump (requires speed)
+
+```{r}
+biplot(p, scale=0, cex=c(0.5,0.5), cex.axis=0.5)
+```
+
+This shows 34 is a clear outlier, providing the worst performances across the board and is affecting the results, so we remove them
+
+```{r}
+p <- prcomp(olympic[-34,-11], scale=TRUE)
+p$sdev
+p$rotation[,1:2]
+
+e <- p$sdev ^ 2
+e <- e / sum(e)
+e
+cumsum(e)
+
+screeplot(p)
+```
+
+# Plot using biplot and ggplot2
+
+```{r}
+library(ggfortify)
+biplot(p, scale=0, cex=c(.5,.5), cex.axis=.5)
+autoplot(p, scale=0, loadings = T, loadings.label = T) 
+#This plot is nice as it gives the variation proportions in the axis titles
+```
+
+Less variance is explained by the first PC than before. The interpretations of the coefficients are similar.
+Athletes on the rhs are high on PC1, these have good performance overall. 
+Athletes with large values on the PC2 side, ie large difference in the contrast of throwing events with speed events. This tells us that athletes in the upper right of the plot eg 10,11,1,7 are high performers, especially at throwing
+
+
+Autoplot is also useful for displaying clustering results
+```{r}
+solympic <- scale(olympic[-34,-11])
+km <- kmeans(solympic,3,nstart = 10)
+pa <- autoplot(km,data= solympic) +
+  theme(legend.position = "none")
+
+library(ggalt)
+pa + geom_encircle(aes(group = km$cluster))
+#this plot shows PCA, coloured by the 3-cluster PCA solution
+```
+
+
+```{r}
+```
+
